@@ -1,88 +1,101 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using GraduationTracker.Models;
+using GraduationTracker.Services;
 
 namespace GraduationTracker.Tests.Unit
 {
+    // This is not how I would normally do it. I would use a mocking library to dynamically
+    // alter the behavior of the mock for each test. Here I am only going to use it for one test
+    internal class ServiceMock : IRequirementsService
+    {
+        public bool CreditsFulfilled(Requirement requirement, Student student)
+        {
+            return true;
+        }
+
+        public int GetStudentAverage(Student student)
+        {
+            return 95;
+        }
+    }
+
+    // After some refactoring, the original test did not make much sense anymore;
+    // besides, it my opinion, it was testing too much. So I broke it down into several smaller ones
     [TestClass]
     public class GraduationTrackerTests
     {
         [TestMethod]
-        public void TestHasCredits()
+        public void ShouldHaveEnoughCredits()
         {
-            var tracker = new GraduationTracker();
+            // Arrange
+            RequirementsService service = new RequirementsService();
+            Diploma diploma = Repository.GetDiploma(1);
+            Student student = Repository.GetStudent(1);
 
-            var diploma = new Diploma
-            {
-                Id = 1,
-                Credits = 4,
-                Requirements = new int[] { 100, 102, 103, 104 }
-            };
+            // Act
+            bool result = service.CreditsFulfilled(diploma.Requirements[0], student);
 
-            var students = new[]
-            {
-               new Student
-               {
-                   Id = 1,
-                   Courses = new Course[]
-                   {
-                        new Course{Id = 1, Name = "Math", Mark=95 },
-                        new Course{Id = 2, Name = "Science", Mark=95 },
-                        new Course{Id = 3, Name = "Literature", Mark=95 },
-                        new Course{Id = 4, Name = "Physichal Education", Mark=95 }
-                   }
-               },
-               new Student
-               {
-                   Id = 2,
-                   Courses = new Course[]
-                   {
-                        new Course{Id = 1, Name = "Math", Mark=80 },
-                        new Course{Id = 2, Name = "Science", Mark=80 },
-                        new Course{Id = 3, Name = "Literature", Mark=80 },
-                        new Course{Id = 4, Name = "Physichal Education", Mark=80 }
-                   }
-               },
-            new Student
-            {
-                Id = 3,
-                Courses = new Course[]
-                {
-                    new Course{Id = 1, Name = "Math", Mark=50 },
-                    new Course{Id = 2, Name = "Science", Mark=50 },
-                    new Course{Id = 3, Name = "Literature", Mark=50 },
-                    new Course{Id = 4, Name = "Physichal Education", Mark=50 }
-                }
-            },
-            new Student
-            {
-                Id = 4,
-                Courses = new Course[]
-                {
-                    new Course{Id = 1, Name = "Math", Mark=40 },
-                    new Course{Id = 2, Name = "Science", Mark=40 },
-                    new Course{Id = 3, Name = "Literature", Mark=40 },
-                    new Course{Id = 4, Name = "Physichal Education", Mark=40 }
-                }
-            }
-
-
-            //tracker.HasGraduated()
-        };
-            
-            var graduated = new List<Tuple<bool, STANDING>>();
-
-            foreach(var student in students)
-            {
-                graduated.Add(tracker.HasGraduated(diploma, student));      
-            }
-
-            
-            Assert.IsFalse(graduated.Any());
-
+            // Assert
+            Assert.IsTrue(result);
         }
 
+        [TestMethod]
+        public void ShouldNotHaveEnoughCredits()
+        {
+            // Arrange
+            RequirementsService service = new RequirementsService();
+            Diploma diploma = Repository.GetDiploma(1);
+            Student student = Repository.GetStudent(2);
 
+            // Act
+            bool result = service.CreditsFulfilled(diploma.Requirements[0], student);
+
+            // Assert
+            Assert.IsFalse(result);
+        }
+
+        [TestMethod]
+        public void ShouldGetAnAverageOf95()
+        {
+            // Arrange
+            RequirementsService service = new RequirementsService();
+            Student student = Repository.GetStudent(1);
+
+            // Act
+            int result = service.GetStudentAverage(student);
+
+            // Assert
+            Assert.AreEqual(95, result);
+        }
+
+        [TestMethod]
+        public void ShouldGetAnAverageOf72()
+        {
+            // Arrange
+            RequirementsService service = new RequirementsService();
+            Student student = Repository.GetStudent(2);
+
+            // Act
+            int result = service.GetStudentAverage(student);
+
+            // Assert
+            Assert.AreEqual(72, result);
+        }
+
+        [TestMethod]
+        public void ShouldGraduateWithMagnaCumLaude()
+        {
+            // Arrange
+            
+            GraduationTracker tracker = new GraduationTracker(new ServiceMock());
+            Diploma diploma = Repository.GetDiploma(1);
+            Student student = Repository.GetStudent(1);
+
+            // Act
+            Standing result = tracker.HasGraduated(diploma, student);
+
+            //Assert
+            Assert.AreEqual(Standing.MagnaCumLaude, result);
+        }
     }
 }
